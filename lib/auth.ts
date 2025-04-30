@@ -1,4 +1,5 @@
 import { createHash, randomBytes, pbkdf2 } from "node:crypto";
+import * as debug from "./debug.ts";
 
 function parseHeaderFeilds(str: string): Record<string, string> {
   const res = {};
@@ -83,6 +84,9 @@ export function digest(
   cnonce?: string | Buffer,
   nc?: string | Buffer,
 ): string {
+
+  debug.customLog("NA", `calculating digest: username: ${username}, realm: ${realm}, password: ${password}, qop: ${qop}, uri: ${uri}, nonce: ${nonce}, cnonce: ${cnonce}, nc: ${nc}, httpMethod: ${httpMethod}`);
+
   const ha1 = createHash("md5");
   ha1.update(username).update(":").update(realm).update(":").update(password);
   // TODO support "MD5-sess" algorithm directive
@@ -112,8 +116,12 @@ export function digest(
       .update(qop);
   }
   hash.update(":").update(ha2d);
+  const response = hash.digest("hex");
 
-  return hash.digest("hex");
+
+
+//   return hash.digest("hex");
+  return response;
 }
 
 export function solveDigest(

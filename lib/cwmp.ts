@@ -80,6 +80,7 @@ async function authenticate(
     sessionContext.cacheSnapshot,
     "cwmp.auth",
   );
+  debug.customLog(sessionContext.deviceId, "Authenticating...");
   if (authExpression == null) return true;
 
   let authentication;
@@ -95,7 +96,11 @@ async function authenticate(
   }
 
   if (authentication?.method === "Digest") {
+	const my_socket = sessionContext.httpRequest.socket;
+	  debug.customLog(sessionContext.deviceId, `[Socket Info] Remote Address: ${my_socket.remoteAddress}, Remote Port: ${my_socket.remotePort}, Local Port: ${my_socket.localPort}`);
+
     const sessionNonce = sessionsNonces.get(sessionContext.httpRequest.socket);
+	debug.customLog(sessionContext.deviceId, `socketId: ${sessionContext.httpRequest.socket.id}, sessionNonce: ${sessionNonce}, authNonce: ${authentication.nonce}, qop: ${authentication.qop}, cnonce: ${authentication.cnonce}, ns: ${authentication.nc}`);
 
     if (
       !sessionNonce ||
@@ -105,6 +110,10 @@ async function authenticate(
       return false;
 
     authentication["body"] = body;
+  }
+
+  if (sessionContext.debug) {
+	debug.customLog(sessionContext.deviceId, `auth method: ${authentication?.method}`);
   }
 
   const res = await evaluateAsync(
@@ -146,6 +155,7 @@ async function authenticate(
                 authentication["cnonce"],
                 authentication["nc"],
               );
+			  debug.customLog(sessionContext.deviceId, `calculated digest: ${expected}, required: ${authentication["response"]}`);
               return expected === authentication["response"];
             }
           }
@@ -992,6 +1002,10 @@ async function responseUnauthorized(
     } else {
       const nonce = crypto.randomBytes(16).toString("hex");
       sessionsNonces.set(sessionContext.httpRequest.socket, nonce);
+	  const my_socket = sessionContext.httpRequest.socket;
+	  debug.customLog(sessionContext.deviceId, `[Socket Info] Remote Address: ${my_socket.remoteAddress}, Remote Port: ${my_socket.remotePort}, Local Port: ${my_socket.localPort}`);
+	  debug.customLog(sessionContext.deviceId, `[Nonce SET] Socket ID: ${sessionContext.httpRequest.socket.id}, Nonce: ${nonce}`);
+
       let d = `Digest realm="${REALM}"`;
       d += ',qop="auth,auth-int"';
       d += `,nonce="${nonce}"`;
@@ -1020,6 +1034,8 @@ async function processRequest(
     w.sessionContext = sessionContext;
     logger.accessWarn(w);
   }
+
+  console.log("NTIIN>> Processing request")
 
   if (sessionContext.state === 0) {
     if (rpc.cpeRequest?.name !== "Inform")
@@ -1054,6 +1070,10 @@ async function processRequest(
         body,
       );
     }
+
+	if (sessionContext.debug) {
+		debug.customLog(sessionContext.deviceId, `Req Name: ${rpc.cpeRequest?.name}`);
+	}
 
     const authenticated = await authenticate(sessionContext, body);
     if (!authenticated) {

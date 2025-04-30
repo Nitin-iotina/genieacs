@@ -234,3 +234,20 @@ export function incomingXmppStanza(deviceId: string, body: string): void {
     appendFileSync(DEBUG_FILE, JSON.stringify(msg) + "\n");
   else throw new Error(`Unrecognized DEBUG_FORMAT option`);
 }
+
+export function customLog(deviceId: string, log: string): void {
+	if (!DEBUG_FILE) return;
+  const now = new Date();
+  const msg = {
+    event: "NITIN>>> Custom Log",
+    timestamp: now,
+    deviceId: deviceId,
+    body: log,
+  };
+
+  if (DEBUG_FORMAT === "yaml")
+    appendFileSync(DEBUG_FILE, "---\n" + stringify(msg));
+  else if (DEBUG_FORMAT === "json")
+    appendFileSync(DEBUG_FILE, JSON.stringify(msg) + "\n");
+  else throw new Error(`Unrecognized DEBUG_FORMAT option`);
+}
